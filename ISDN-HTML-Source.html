@@ -1,0 +1,1493 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta name="language" content="en">
+  <meta name="description" content="Make Mobile Responsive CSS rollover or clickable picture gallery without scripts, using your hosted images and photos. ">
+  <title>Make mobile responsive CSS rollover picture gallery without scripts.</title>
+
+<!-- force https reload -->
+<script>
+if (window.location.protocol=='http:'){ window.location.href = window.location.toString().replace(/http\:/i,'https:'); }
+</script>
+
+
+<!--
+2016.09.16 v9  cleanup and formatting
+2017.05.08 v10 add ClicPic extraction
+2018.03.31 v13 add supersize overlay
+2018.07.03 v14 add EPS extraction
+2018.07.04 v15 add color themes
+2018.08.15 v17 inpage preview issues
+2019.11.15 v18 https
+2019.12.15 v19 https call
+-->
+
+
+<style>
+  body 		{ font-family:arial; background:#eee; margin:0; padding:0;  }
+  .page 	{ margin: 2%; }
+  textarea 	{ width:100%; height:200px; padding:2px; background:white; border:1px solid silver; border-radius:5px;
+	-webkit-box-shadow: inset 5px 5px 5px 0px rgba(0,0,0,.4);
+	   -moz-box-shadow: inset 5px 5px 5px 0px rgba(0,0,0,.4); 
+	        box-shadow: inset 5px 5px 5px 0px rgba(0,0,0,.4);  
+		}
+  #iPhotolist 	{ white-space:pre; }
+  p.header 	{ margin-bottom:.4em; clear:both; font-weight:bold; font-size:smaller; }
+  p.header.sub 	{ background:#d0d8e4; padding-left:.25em; color:#222; }
+  p.numline 	{padding:.2em 1em; color:white; font-weight:bold; border-radius:30px 0 0 30px; background-color:#789; 
+		background-image:-webkit-linear-gradient(90deg, #789, #cde );
+		background-image:   -moz-linear-gradient(90deg, #789, #cde );  
+		background-image:     -o-linear-gradient(90deg, #789, #cde ); 
+		background-image:        linear-gradient(90deg, #789, #cde );    
+		}
+  p.numline big	{ color:white;} 
+
+  .btn 		{ position:absolute; left:0; top:0; right:0; bottom:0; margin:auto; }
+  .btn img 	{ position:relative; width:30px; height:30px; float:left; border:0; margin:2px; background:#888; }
+  .btn div 	{ position:relative; width:4px; height:4px; float:left; margin:2px; display:none; background:#888; }
+  #btn0,#btn1,#btn2,#btn3,#btn4,#btn5,#btn6,#btn7 { position:relative; float:left; border:2px outset silver; margin:4px; width:50px; height:50px; text-align:center; background:white; }
+
+  #btn0 div:nth-child(4) { display:block; width:30px; } /*big on top, bottom thms */
+  #btn1 div:nth-child(1) { display:block; height:30px;} /*big on right, left thms */
+  #btn2 div:nth-child(1) { display:block; width:30px; } /*big on bottom, top thms */
+  #btn3 div:nth-child(4) { display:block; height:30px;} /*big on left, right thms */
+
+  #btn4 div:nth-child(4), #btn4 div:nth-child(5) { display:block; width:30px; } /*big on top, bottom thms */
+  #btn5 div:nth-child(1), #btn5 div:nth-child(2) { display:block; height:30px;} /*big on right, left thms */
+  #btn6 div:nth-child(1), #btn6 div:nth-child(2) { display:block; width:30px; } /*big on bottom, top thms */
+  #btn7 div:nth-child(4), #btn7 div:nth-child(5) { display:block; height:30px;} /*big on left, right thms */
+
+
+  .spinner	{ position:relative; display:inline-block; vertical-align:top; margin-top:3px; width:12px; height:20px; font-size:10px; line-height:8px; margin-right:1px; background:#f0f0e0; color:gray; text-align:center; cursor:pointer; }
+  .spinup 	{ position:absolute; width:25px; height:16px; left:0; bottom:50%; cursor:pointer; }
+  .spindn 	{ position:absolute; width:25px; height:16px; left:0; top:50%;    cursor:pointer; }
+  .spinup span 	{ position:absolute; display:block; left:0; bottom:0; width:10px; height:8px; border:1px outset #ddd; }
+  .spindn span 	{ position:absolute; display:block; left:0;   top:0;  width:10px; height:8px; border:1px outset #ddd; }
+
+  b.dim 	{ font-weight:bold; color:#333; font-family:arial narrow, arial; }
+  .palette 	{ border-radius:10px; } /* in color palette */
+
+  .options 	{ float:left; margin-left:1em; border-left:1px silver dotted; padding: .5em; }
+  .options label { font-size:smaller; }
+  .options input,
+  .options select { margin:.1em 0 .4em 0; background-color:#fffffe; }
+
+  /* turn off drag highlighting*/
+  #colorzone, 	/* in color palette */
+  #slidezone, 	/* in color palette */
+  #scaler,	/* in ruler */
+  #spinner	{
+        -ms-user-select: none; /* Internet Explorer */
+       -moz-user-select: none; /* Firefox */
+     -khtml-user-select: none; /* KHTML browsers (e.g. Konqueror) */
+    -webkit-user-select: none; /* Chrome, Safari, and Opera */
+  -webkit-touch-callout: none; /* Disable Android and iOS callouts*/
+  }
+
+</style>
+
+<script>
+  var countrylist=[
+	["",			"-select-"	,""   ],
+	["ebay.com",		"US"		,"us" ],
+	["ebay.co.uk",		"UK"		,"uk" ],
+	["ebay.com.au",		"Australia"	,"au" ],
+	["ebay.at",		"Austria"	,"at" ],
+	["benl.ebay.be",	"Belgium (de)"	,"be" ],
+	["befr.ebay.be",	"Belgium (fr)"	,"bef"],
+	["ebay.ca",		"Canada"	,"ca" ],
+	["cafr.ebay.ca",	"Canada (fr)"	,"caf"],
+	["ebay.fr",		"France"	,"fr" ],
+	["ebay.de",		"Germany"	,"de" ],
+	["ebay.com.hk",		"HongKong"	,"hk" ],
+	["ebay.in",		"India"		,"in" ],
+	["ebay.ie",		"Ireland"	,"ie" ],
+	["ebay.it",		"Italy"		,"it" ],
+	["ebay.com.my",		"Malaysia"	,"my" ],
+	["ebay.nl",		"Netherlands"	,"nl" ],
+	["ebay.ph",		"Philippines"	,"ph" ],
+	["ebay.pl",		"Poland"	,"pl" ],
+	["ebay.com.sg",		"Singapore"	,"sg" ],
+	["ebay.es",		"Spain"		,"es" ],
+	["ebay.ch",		"Switzerland"	,"ch" ],
+	["motors.ebay.com",	"eBayMotors"	,"mo" ],
+	[]
+  ]
+
+  var premadeColors=[["-select-","body"   ,"text"   ,"cell"   ,"other"   ,"round","shadow","cellborder"]
+	,["White/White (default)","#FFFFFF","#000000","#FFFFFF","#000000",0,0,0]
+	,["White Wireframe"	,"#FFFFFF","#000000","#FFFFFF","#000000",0,0,1]
+	,["Transparent Wireframe*","transparent","#000000","transparent","#000000",0,0,1]
+	,["Transparent/Clear*"	,"transparent","#000000","transparent","#000000",0,2,0]
+	,["Transparent/White"	,"transparent","#000000","#FFFFFF","#000000",0,1,0]
+	,["Silver/White"	,"#D0D0D0","#000000","#FFFFFF","#000000",3,1,0]
+	,["Silver/White plain"	,"#D0D0D0","#000000","#FFFFFF","#000000",0,0,0]
+
+	,["Gray/White" 		,"#888888","#FFFFFF","#FFFFFF","#222222",3,1,0]
+	,["Charcoal/Gray"	,"#494646","#BBB7AB","#BBB7AB","#000000",3,1,0]
+	,["Brick/White"		,"#703030","#FFEEEE","#FFFFFF","#000000",3,0,0]
+	,["Forest/Moss"		,"#416345","#CEDDA5","#CEDDA5","#000000",3,0,0]
+	,["Plum/Pink"		,"#703060","#FFE0F0","#FFE0F0","#000000",3,0,0]
+	,["Tan/White" 		,"#C2BAA0","#332211","#FFFFFF","#000000",3,1,0]
+
+	,["Rose/Pink"		,"#EF6F84","#FFF0F0","#FBCDCD","#000000",3,1,0]
+	,["Yellow/Cream"	,"#E8E87B","#383838","#F5F7D0","#000000",3,1,0]
+	,["Sky/White" 		,"#8EA7EA","#2F2E40","#FFFFFF","#2F2E40",3,1,0]
+	,["Peach/Cream" 	,"#EBC078","#403020","#F7F5D0","#000000",3,1,0]
+	,["Blush/Tan"   	,"#CE8B8B","#321818","#BBB7AB","#000000",3,1,0]
+	,["Lime/White"		,"#99F266","#255D20","#FFFFFF","#000000",3,1,0]
+	,["Lavender/White"	,"#D8A0E0","#442255","#FFFFFF","#000000",3,1,0]
+
+	,["Gold/Copper"	,"#A9A92B","#F5F7D0","#A07020","#FFFFFF",3,1,0]
+	,["Red/White"  	,"#A00000","#FFEEEE","#FFFFFF","#000000",3,0,0]
+	,["Green/White"	,"#307030","#EEFFEE","#FFFFFF","#000000",3,0,0]
+	,["Blue/White"	,"#2B297B","#EEEEFF","#FFFFFF","#000000",3,0,0]
+	,["Orange/Gold"	,"#D36A00","#F6EBA0","#EFD240","#000000",3,1,0]
+
+	,["Purple/White","#7B297B","#FFEEFF","#FFFFFF","#000000",3,0,0]
+	,["Black/Black"	,"#000000","#F0F0F0","#000000","#FFFFFF",0,0,0]
+	,["Black/White"	,"#000000","#F0F0F0","#FFFFFF","#000000",3,0,0]
+	,["Pink/Black"	,"#EF6F84","#000000","#000000","#FFFFFF",0,1,0]
+	,["White/Navy"	,"#FFFFFF","#031050","#1C227D","#FFFFFF",0,1,0]
+	,["White/Brown"	,"#FFFFFF","#3D2717","#754D24","#FFFFFF",0,1,0]
+	,["White/Black"	,"#FFFFFF","#000000","#000000","#FFFFFF",0,1,0]
+	,[]
+	];
+
+
+
+var selColor=0;
+function $(v){return document.getElementById(v);}
+function trims(txt){ return txt.replace(/^\s+|\s+$/g,''); }
+
+function init(){
+	$('Color0').checked=true; 
+	selColor=0;
+	doColor($('iColor0').value);
+	updateColorSwatches();
+}
+
+function spin(par,el,dir,min,max){
+	// par is -1 for prevSib or +1 for nextSib because spinner can reside before or after the field
+	// el is the pointer. Find the target element: this.parentNode.parentNode.previousSibling
+ 	if (par>0){
+		el=getNextSib(el.parentNode);
+	}else{
+		el=getPrevSib(el.parentNode)
+	}
+	el.value=Math.round(100*Math.min(max,Math.max(min,el.value*1+dir)))/100; // fractional numbers truncated at 2 decimal places
+	makeCode();
+}
+
+function getFirstChild(el){
+	if(el.firstChild){
+		el=el.firstChild;
+		if (el.nodeType!=1){
+			while (el.nextSibling){ el=el.nextSibling; if (el.nodeType==1){ break; }}
+		}
+	}
+	return el;
+}
+function getNextSib(el){
+	while (el.nextSibling ){el=el.nextSibling; if (el.nodeType==1){ break; }}
+	return el;
+}
+function getPrevSib(el){
+	while (el.previousSibling ){el=el.previousSibling; if (el.nodeType==1){ break; }}
+	return el;
+}
+
+function decplace(num,cnt){
+	return  (Math.floor(num*Math.pow(10,cnt)))/Math.pow(10,cnt);
+}
+function calcRatio(terms){
+	ops=terms.split(/[\/\:]/);	
+	if (ops[1]&&ops[1]!=0){
+		return decplace(ops[0]/ops[1],3);
+	}
+	else {
+		return terms
+	}
+}
+
+function makeButtons(){ 
+	var innerbtn='<div class="btn"> <div></div> <div></div> <img src=x.gif> <div></div> <div></div> </div>';
+	var btn='';
+	for (var i=0; i<8; i++){
+	 	btn+='<div id="btn'+i+'">'+innerbtn+'</div>';
+	}
+	return btn;
+
+}
+
+function buildSiteList(){ // make siteID droplist
+	var defSite='us', code='';
+	for (var i=0; i<countrylist.length-1; i++){
+		if (countrylist[i][2]==defSite){
+			sel=' selected'; $("siteid").value=countrylist[i][0];}
+		else{sel=''}
+		code+='<option value="'+countrylist[i][0]+'"'+sel+'>'+countrylist[i][1]+'</option>';
+	}
+	document.write(code);
+}
+
+function premadeGalleryColors(num){
+	if (num==0){return}
+
+	$('iRounding').value			=premadeColors[num][5];
+	$('iShadows').value			=premadeColors[num][6];
+	$('iBorders').value			=premadeColors[num][7];
+
+	// the onchange event is triggered;
+	$('iColor0').value			=premadeColors[num][1]; //gallery
+	$('iColor1').value			=premadeColors[num][3]; //cell 
+	$('iColor5').value 			=premadeColors[num][2]; //text color
+	updateColorSwatches();
+	makeCode();
+}
+
+function buildPremadeColorList(){
+	var list='';
+	for (var i=0; i<premadeColors.length-1; i++){
+		list +='\n<option value="'+i+'" style="background-color:'+premadeColors[i][1]+'; color:'
+		     + premadeColors[i][2]+';">'+premadeColors[i][0]+'</option>'
+	}
+	return list;
+}
+
+
+function callEbay(){
+	var site=$("siteid").value||"ebay.com";
+	var size=$("ebaysize").value||3;
+	var b="?orig_cvip=true"
+	var page=document.getElementById('itemnumber').value.replace(/\s/g,"")
+	if (page.length>0&&page.search(/\D/)==-1){page='https://www.'+site+'/itm/'+page+b} // if only an item number
+	else if (page.indexOf("http")!=0){page=""; return;}
+
+	var ajaxObj=getAjaxObj();
+	if (ajaxObj!=null){
+		theCall="https://www.isdntek.com/ebaytools/epsPagePhotos.php?size="+size+"&page="+escape(page);
+		//theCall="../../ebaytools/epsPagePhotos.php?size="+size+"&page="+escape(page);
+		ajaxObj.onreadystatechange=function(){
+			if (ajaxObj.readyState==4){extractEbayImages(ajaxObj.responseText);}
+		}
+		ajaxObj.open("GET",theCall,true);
+		ajaxObj.send(null);
+	}
+
+}
+
+function extractEbayImages(stream){
+	$("iPhotoMess").value = stream.replace(/\s/g,'\n');
+	//convertimages(0);
+	extractPhotos();
+}
+
+function extractClicPic(orig){
+	var rev    ="";
+	var cellBdr=0;
+	var bigWd  =400;
+	var bigHt  =300;
+	var colSpan=0;
+	var rowSpan=0; // colspan and rowspan are always the same
+
+	//var thmList = orig.match(/http[^>]+?[^\/]\/sm_.*?\.jpg/gi);
+	var thmList = orig.match(/http[^>'"]+?\/sm_.*?\.jpg/gi);
+
+	if (thmList){
+	//alert(thmList.join('\n'))
+	}
+	var xlList = orig.match(/http[^>'"]+?\/xl_.*?\.jpg/gi);
+	var lgList = orig.match(/http[^>'"]+?\/lg_.*?\.jpg/gi);
+	var imgList= orig.match(/http[^>'"]+?\/[^>'"]*?\.jpg/gi);
+	photos=[];
+	if (xlList){photos=xlList}
+	else if (lgList){photos=lgList}
+	else if (imgList){photos=imgList}
+	else {return}
+
+	//purge without sorting
+	for (var i=photos.length-1; i>0; i--){
+			for (var k=0; k<i; k++){
+			//remove duplicates
+			if (photos[i]==photos[k]){ photos.splice(i,1) }
+			}
+	}
+	$('iPhotolist').value = photos.join('\n');
+
+
+	var bigCell = orig.match(/\<td[^>]+?clicpic\=[\s\S]+?\>/i);
+	if (bigCell){
+		var wd=bigCell[0].match(/width=[\'\"]*(\d+)/i);
+		var ht=bigCell[0].match(/height=[\'\"]*(\d+)/i);
+		if (ht && ht[1]){bigHt=ht[1]}
+		if (wd && wd[1]){bigWd=wd[1]}
+		var cols=bigCell[0].match(/colspan=[\'\"]*(\d+)/i);
+		var rows=bigCell[0].match(/rowspan=[\'\"]*(\d+)/i);
+		if (cols && cols[1]){colSpan=cols[1]}
+		if (rows && rows[1]){rowSpan=rows[1]}
+	}
+	$('iMax').value = bigWd;  // max width of large photo
+	$('iSize').value =100;    //% width of gallery within container
+
+	var aspect=Math.round((bigWd/bigHt)*1000)/1000;
+
+	if      (Math.abs(1-aspect)<.07     || Math.abs(aspect-1)<.07     ){aspect=1    }
+	else if (Math.abs(1.333-aspect)<.07 || Math.abs(aspect-1.333)<.07 ){aspect=1.333}
+	else if (Math.abs(.75-aspect)<.07   || Math.abs(aspect-.75)<.07   ){aspect=.75  }
+	else if (Math.abs(1.5-aspect)<.07   || Math.abs(aspect-1.5)<.07   ){aspect=1.5  }
+	else if (Math.abs(.667-aspect)<.07  || Math.abs(aspect-.667)<.07  ){aspect=.667 }
+	$('iAspect').value = $('iAspectSel').value = aspect;
+
+
+
+	var tbl=orig.match(/\<table[^>]+?width\=[\'\"]*(\d+)/i);
+	if (tbl && tbl[1]){tableWd=tbl[1]}
+	//alert (bigCell);
+	//alert ([bigWd,bigHt]);
+	//alert (tableWd);
+
+
+	var thSize=orig.match(/\<td[^>]+?width\=[\'\"]*(\d+)/i);
+	if(thSize && thSize[1]){
+		thWd=thSize[1];
+		//alert(thWd);
+	}
+
+	var thSize=orig.match(/\<tr[^>]+?height\=[\'\"]*([^0][0-9]+)/i);
+	if(thSize && thSize[1]){
+		thHt=thSize[1];
+		//alert(thHt); // non-zero row, but what about zoom text?
+	}
+
+	// we can just ballpark the thumbnail sizes 
+	// from the BigPic dims divided by colspan (which is always 4 in clicpic).
+	// clicpic supports only 48 photos
+	$('iPerside').value =4;
+	$('iRowcol').value =1;
+	if (photos.length>4 && photos.length<=8 ){ $('iRowcol').value=2; $('iPerside').value =4; }
+	if (photos.length>8 && photos.length<=10){ $('iRowcol').value=2; $('iPerside').value =5; }
+	if (photos.length>10 && photos.length<=12){ $('iRowcol').value=2; $('iPerside').value =6; }
+	if (photos.length>12 && photos.length<=15){ $('iRowcol').value=3; $('iPerside').value =5; }
+	if (photos.length>15 && photos.length<=18){ $('iRowcol').value=3; $('iPerside').value =6; }
+	if (photos.length>18 && photos.length<=24){ $('iRowcol').value=3; $('iPerside').value =8; }
+	if (photos.length>24 && photos.length<=48){ $('iRowcol').value=4; $('iPerside').value =Math.ceil(photos.length/4); }
+
+	var tblBG=orig.match(/\<table[^>]+?bgcolor\=[\'\"]*(#[0-9A-F]{6})/i);
+	if (tblBG){ tblBG = tblBG[1];}
+	else{tblBG='transparent';}
+	$('iColor0').value =tblBG;
+
+	//alert(tblBG);
+	var cellBG=orig.match(/\<td[^>]+?bgcolor\=[\'\"]*(#[0-9A-F]{6})/i);
+	if (cellBG){ cellBG = cellBG[1];}
+	else{cellBG='#ffffff' ;'transparent';}
+	//alert(cellBG);
+	$('iColor1').value =cellBG;
+
+	var bdr = orig.match(/\<table[^>]+?border\=[\'\"]*([1-9])/ig);
+	if (bdr && bdr[0]){
+		cellBdr=1;
+		$('iBorders').value=1;  	// border on
+		$('iCellBdrStyle').value=1;	// border 3D
+		//alert(cellBdr);
+	}
+	else {
+		$('iBorders').value=0;
+		$('iCellBdrStyle').value=0;
+	}
+	$('iColor3').value = '#808080';  //cellbdrcolor
+	$('iThMat').value  = 0;
+	$('iBgMat').value  = 0;
+	$('iGap').value    = 5;  // usually 4,5,6 based on size of large photo
+	$('iGalMat').value = 8;
+
+	var fontColor = "";
+	var tblHd     = "";
+	var tblFt     = "";
+	var tblHeading = orig.match(/\<font[\s\S]+?\<table/i);
+	if (tblHeading){
+		fColor = tblHeading[0].match(/color\=[\'\"]*(#[0-9A-F]{6})/i);
+		if (fColor){fontColor=fColor[1]}
+		tblHd = tblHeading[0].match(/\<font[^>]+?\>(.+?)\<\/?font/i);
+		if (tblHd){tblHd=tblHd[1]}
+	}
+
+	//<font face='verdana,arial,helvetica,sans-serif' size=-1 color=#FFFFFF><B>3 Jelly Jars with Fruit Lids</B>
+ 	//&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <font size=-2>Click small picture to enlarge</font></font><table
+
+	var tblFooter = orig.match(/\<\/table\>[\s]*\<font[\s\S]+?\<\/td/i);
+
+	if (tblFooter){
+		//tblFooter=tblFooter[0].replace(/\<font[^>]+?\>ClicPic\<\/font\>/ig,'');
+		tblFooter=tblFooter[0].replace(/(Free )*\<a[^>]+?clicpic.htm[\s\S]+?\>ClicPic[\s\S]+?Gallery Software./ig,'');
+		tblFooter=tblFooter.replace(/\<font[^>]+?\>ClicPic\<\/font\>/ig,'');
+		if (fontColor==""){
+			fColor = tblFooter.match(/color\=[\'\"]*(#[0-9A-F]{6})/i);
+			if (fColor){fontColor=fColor[1]}
+		}
+		tblFt=tblFooter.replace(/\<\/table\>|\<font[^>]*?\>|\<\/font\>|\<\/td/ig,'');
+	}
+
+ 	//</tr></table><font face='arial,helvetica,sans-serif' size=-2><font style='font-size:1pt; color:#C0C0C0;'>ClicPic</font> 
+ 	//<font color=#000000>Photos copyright &copy; 2006 art_vandelay_industries. Do not use without permission.</font><br>
+ 	//<font color=#000000>Click small picture to enlarge. &nbsp; 
+ 	//<a href='https://www.isdntek.com/clicpic.htm' target=_blank><font color=#000000>ClicPic</font></A> Gallery Software.</font></font></TD></TR></TABLE>
+
+ 	//</table><font face='arial,helvetica,sans-serif' size=-2><font style='font-size:1pt; color:#C0C0C0; visibility:hidden;'>ClicPic</font> 
+ 	//<font color=#FFFFFF>Click small picture to enlarge. &nbsp; 
+ 	//Free <a href='https://www.isdntek.com/clicpic.htm' target=_blank><font color=#FFFFFF>ClicPic</font></A> Gallery Software.</font></font></TD>
+
+	if (fontColor==""){fontColor="#000"}
+	$('iHeader').value=trims(tblHd.replace(/&nbsp;/gi,' ')); 
+	$('iFooter').value=trims(tblFt.replace(/&nbsp;/gi,' ')); 
+	$('iColor5').value = fontColor;
+}
+
+
+function extractPhotos(){
+	// ebays editor will linebreak long URLs, so we can't convert that type of break into a space.
+	var source = $('iPhotoMess').value.replace(/\r|\n/gi,"");
+	source = source.replace(/\s+/gi," ");
+	var photos = source.match(/http[s]*:\/\/[^'">]+?\.(jpg|jpeg|gif|png)/gi);
+	if (photos){
+		//photos=photos.sort();
+		for (var i=photos.length-1; i>=0; i--){
+			for (var k=0; k<i; k++){
+			//remove duplicates
+			if (photos[i]==photos[k]){ photos.splice(i,1) }
+			}
+			//remove duplicates
+			//if (i>0 && photos[i]==photos[i-1]){ photos.splice(i,1) }
+		}
+		$('iPhotolist').value = photos.join('\n');
+	} 
+	else {	$('iPhotolist').value = ""; }
+	if (source.match("clicpic=") && source.match(/name=[\'\"]*clicpicLG/i )){
+		extractClicPic(source); 
+	}
+	else {
+		//$('iPerside').value  limit is 12
+		//$('iRowcol').value   limit is 10
+		if ($('iPerside').value*$('iRowcol').value <photos.length){
+			if (photos.length>4 && photos.length<=8 ){ $('iRowcol').value=2; $('iPerside').value =4; }
+			if (photos.length>8 && photos.length<=10){ $('iRowcol').value=2; $('iPerside').value =5; }
+			if (photos.length>10 && photos.length<=12){ $('iRowcol').value=2; $('iPerside').value =6; }
+			if (photos.length>12 && photos.length<=15){ $('iRowcol').value=3; $('iPerside').value =5; }
+			if (photos.length>15 && photos.length<=18){ $('iRowcol').value=3; $('iPerside').value =6; }
+			if (photos.length>18 && photos.length<=24){ $('iRowcol').value=3; $('iPerside').value =8; }
+			if (photos.length>24 && photos.length<=48){ $('iRowcol').value=4; $('iPerside').value =Math.ceil(photos.length/4); }
+			if (photos.length>48 ){ $('iRowcol').value=Math.ceil(photos.length/12); $('iPerside').value =12 ; } // limit is 120
+		}
+	}
+	makeCode();
+}
+
+function makeCode(){
+	var imglist 	= $('iPhotolist').value.split(/\r\n|\r|\n/g);
+	for (var i=imglist.length-1; i>=0; i--){
+		if ( imglist[i].replace(/\s/g,'')=='' ){ imglist.splice(i,1) }
+	}
+	if (imglist.length==0){return}
+
+
+	var pos 	= parseInt($('iPosition').value);
+	var perside 	= parseInt($('iPerside').value)||4;	$('iPerside').value = perside;
+	var rowcol 	= parseInt($('iRowcol').value)||1;	$('iRowcol').value  = rowcol;
+	var size 	= parseInt($('iSize').value)||80;	$('iSize').value    = size;
+	var aspect	= $('iAspect').value = 1*calcRatio($('iAspect').value) || 1;	
+
+
+	var gap		= parseInt($('iGap').value)||0;		$('iGap').value     = gap;
+	var thmat 	= parseInt($('iThMat').value)||0;	$('iThMat').value   = thmat;
+	var bgmat 	= parseInt($('iBgMat').value)||0;	$('iBgMat').value   = bgmat;
+	var galmat 	= parseInt($('iGalMat').value)||0;	$('iGalMat').value  = galmat;
+
+	var doSticky	= $('iSticky').checked;
+	var doSupersize = $('iSupersize').checked;
+	var galcolor    = $('iColor0').value;
+	var cellcolor 	= $('iColor1').value;
+	var picbdrcolor = $('iColor2').value;
+	var cellbdrcolor= $('iColor3').value;
+	var galbdrcolor = $('iColor4').value;
+	var textcolor   = $('iColor5').value;
+
+	var header	= $('iHeader').value;
+	var footer	= $('iFooter').value;
+
+	if (header){var showHd=''} else {var showHd=' display:none;'}
+	if (footer){var showFt=''} else {var showFt=' display:none;'}
+
+	var idx="";
+	if ($('iMulti').checked==true){key="_"+Math.floor(1000*Math.random()) }else {key=""}
+
+
+
+	switch($('iCellBdrStyle').value){
+		case "0":{  // solid
+			picbdrstyle	= 'solid';
+			cellbdrstyle	= 'solid';
+			galbdrstyle	= 'solid';
+			break;
+			}
+		case "1":{ // 3D
+			picbdrstyle	= 'outset';
+			cellbdrstyle	= 'inset';
+			galbdrstyle	= 'outset';
+			break;
+			}
+	}
+
+
+	var decoration_imgshadow=''
+		+'\n    -webkit-box-shadow: 2px 2px 2px 0px rgba(0,0,0,.5); '
+		+'\n       -moz-box-shadow: 2px 2px 2px 0px rgba(0,0,0,.5); '
+		+'\n            box-shadow: 2px 2px 2px 0px rgba(0,0,0,.5); '
+		;
+	var decoration_revimgshadow=''
+		+'\n    -webkit-box-shadow: inset 2px 2px 2px 0px rgba(0,0,0,.5); '
+		+'\n       -moz-box-shadow: inset 2px 2px 2px 0px rgba(0,0,0,.5); '
+		+'\n            box-shadow: inset 2px 2px 2px 0px rgba(0,0,0,.5); '
+		;
+	var decoration_smrounds=''
+		+'\n    -webkit-border-radius: 5px; '
+		+'\n       -moz-border-radius: 5px; '
+		+'\n            border-radius: 5px; '
+		;
+	var decoration_lgrounds=''
+		+'\n    -webkit-border-radius: 15px; '
+		+'\n       -moz-border-radius: 15px; '
+		+'\n            border-radius: 15px; '
+		;
+
+	
+
+	var decoration_cellsborder 	= 'border:1px '+cellbdrstyle+' '+cellbdrcolor+'; ';
+	var decoration_imageborder 	= 'border:1px '+picbdrstyle+ ' '+picbdrcolor+ '; ';
+	var decoration_galleryborder 	= 'border:1px '+galbdrstyle+ ' '+galbdrcolor+ '; ';
+
+	switch($('iBorders').value){
+		case "0":{  // no borders 
+			picborder	= '';
+			cellborder	= '';
+			break;
+			}
+		case "1":{ // cell borders
+			picborder	= '';
+			cellborder	= decoration_cellsborder;
+			break;
+			}
+		case "2":{ // photo borders
+			picborder	= decoration_imageborder;
+			cellborder	= '';
+			break;
+			}
+		case "3":{ // image shadows
+			picborder	= decoration_imageborder;
+			cellborder	= decoration_cellsborder;
+			break;
+			}
+	}
+	var galborder = decoration_galleryborder;
+
+
+
+	switch($('iShadows').value){
+		case "0":{  // no shadows
+			picshadow	= '';
+			cellshadow	= '';  
+			cellrshadow	= '';
+			break;
+			}
+		case "1":{ // cell shadows (no borders)
+			picshadow	= '';
+			cellshadow	= decoration_imgshadow;
+			cellrshadow	= '';
+			break;
+			}
+		case "2":{ // photo shadows 
+			picshadow	= decoration_imgshadow;
+			cellshadow	= ''; 
+			cellrshadow	= '';
+			break;
+			}
+		case "3":{ // photo & cell shadows inset
+			picshadow	= decoration_imgshadow;
+			cellshadow	= ''; 
+			cellrshadow	= decoration_revimgshadow;
+			break;
+			}
+
+
+	}
+	switch($('iRounding').value){
+		case "0":{ // no rounding 
+			thcorners 	= '';
+			bgcorners	= '';
+			thcellcor	= '';
+			bgcellcor	= '';
+			break;
+			}
+		case "1":{ // cell rounding
+			thcorners	= '';
+			bgcorners	= '';
+			thcellcor	= decoration_smrounds;
+			bgcellcor	= decoration_lgrounds;
+			break;
+			}
+		case "2":{ //image rounding
+			thcorners	= decoration_smrounds;
+			bgcorners	= decoration_lgrounds;
+			thcellcor	= '';
+			bgcellcor	= '';
+			break;
+			}
+		case "3":{ // cell and image rounding
+			thcorners	= decoration_smrounds;
+			bgcorners	= decoration_lgrounds;
+			thcellcor	= decoration_smrounds;
+			bgcellcor	= decoration_lgrounds;
+			break;
+			}
+	}
+
+
+	// limit max width of gallery based on max size of large image.
+	// without limits, smaller photos could be floating in space.
+	// adjust for configuration
+	var maxwd	= $('iMax').value;
+
+	// all sizes and percentages will be relative to width
+	//var ratio	= perside/(perside+rowcol);
+
+	var zthwd	= 100;
+	var zthht	= 100/aspect;
+
+	switch(pos){
+		case 0: { // big pic on top - vertical gallery - thumbnails on bottom
+			var zthlength	= (zthwd+2*thmat+2*gap)*perside; //cellswd
+			var zthdepth 	= (zthht+2*thmat+2*gap)*rowcol;
+			var zbgwd 	= zthlength-2*bgmat-2*gap; //cellswd
+			var zbght 	= zbgwd/aspect;
+			var zcellsht 	= zthdepth + zbght +2*bgmat+2*gap;
+			var zcellswd 	= zthlength; 
+			var zgalwd	= zcellswd+2*galmat ;        
+			var zgalht	= zcellsht + (zgalwd-zcellswd);
+			var bgltrt	= 'left';
+			var bgtpbt	= 'top';
+			var mainpos	= 'relative';
+			var maxwd	= Math.round(maxwd * (zgalwd/zbgwd)); 
+			break;
+		}
+		case 2:{ // big pic on bottom - vertical gallery - thumbnails on top
+			var zthlength	= (zthwd+2*thmat+2*gap)*perside; //cellswd
+			var zthdepth 	= (zthht+2*thmat+2*gap)*rowcol;
+			var zbgwd 	= zthlength-2*bgmat-2*gap; //cellswd
+			var zbght 	= zbgwd/aspect;
+			var zcellsht 	= zthdepth + zbght +2*bgmat+2*gap;
+			var zcellswd 	= zthlength; 
+			var zgalwd	= zcellswd+2*galmat ;        
+			var zgalht	= zcellsht + (zgalwd-zcellswd);
+			var bgltrt	= 'left';
+			var bgtpbt	= 'bottom';
+			var mainpos	= 'absolute; '+bgltrt+':0%; '+bgtpbt+':0%';
+			var maxwd	= Math.round(maxwd * (zgalwd/zbgwd)); 
+			break;
+		}
+		case 1:{  // big pic on right - horizontal gallery - thumbnails on left
+			var zthlength	= (zthht+2*thmat+2*gap)*perside; //cellsht
+			var zthdepth 	= (zthwd+2*thmat+2*gap)*rowcol;
+			var zbght 	= zthlength-2*bgmat-2*gap; //cellsht
+			var zbgwd 	= zbght*aspect;
+			var zcellswd 	= zthdepth + zbgwd +2*bgmat+2*gap;
+			var zcellsht 	= zthlength; 
+			var zgalwd	= zcellswd+2*galmat ;        
+			var zgalht	= zcellsht + (zgalwd-zcellswd);
+			var bgltrt	= 'right';
+			var bgtpbt	= 'top';
+			var mainpos	= 'relative';
+			var maxwd	= Math.round(maxwd * (zgalwd/zbgwd)); 
+
+			break;
+		}
+		case 3:{ // big pic on left - horizontal gallery - thumbnails on right
+			var zthlength	= (zthht+2*thmat+2*gap)*perside; //cellsht
+			var zthdepth 	= (zthwd+2*thmat+2*gap)*rowcol;
+			var zbght 	= zthlength-2*bgmat-2*gap; //cellsht
+			var zbgwd 	= zbght*aspect;
+			var zcellswd 	= zthdepth + zbgwd +2*bgmat+2*gap;
+			var zcellsht 	= zthlength; 
+			var zgalwd	= zcellswd+2*galmat ;        
+			var zgalht	= zcellsht + (zgalwd-zcellswd);
+			var bgltrt	= 'left';
+			var bgtpbt	= 'top';
+			var mainpos	= 'relative';
+			var maxwd	= Math.round(maxwd * (zgalwd/zbgwd)); 
+			break;
+		}
+		case 4:{ // big pic centered - horizontal gallery - thumbnails left and right
+			// to do...
+			var zthlength	= (zthht+2*thmat+2*gap)*perside; //cellsht
+			var zthdepth 	= (zthwd+2*thmat+2*gap)*rowcol;
+			var zbght 	= zthlength-2*bgmat-2*gap; //cellsht
+			var zbgwd 	= zbght*aspect;
+			var zcellswd 	= zthdepth + zbgwd +2*bgmat+2*gap;
+			var zcellsht 	= zthlength; 
+			var zgalwd	= zcellswd+2*galmat ;        
+			var zgalht	= zcellsht + (zgalwd-zcellswd);
+			var bgltrt	= 'left';
+			var bgtpbt	= 'top';
+			var mainpos	= 'relative';
+			var maxwd	= Math.round(maxwd * (zgalwd/zbgwd)); 
+			break;
+		}
+		case 5:{ // big pic centered - vertical gallery - thumbnails top and bottom
+			// to do...************
+			var zthlength	= (zthwd+2*thmat+2*gap)*perside; //cellswd
+			var zthdepth 	= (zthht+2*thmat+2*gap)*rowcol;
+			var zbgwd 	= zthlength-2*bgmat-2*gap; //cellswd
+			var zbght 	= zbgwd/aspect;
+			var zcellsht 	= zthdepth + zbght +2*bgmat+2*gap;
+			var zcellswd 	= zthlength; 
+			var zgalwd	= zcellswd+2*galmat ;        
+			var zgalht	= zcellsht + (zgalwd-zcellswd);
+			var bgltrt	= 'left';
+			var bgtpbt	= 'top';
+			var mainpos	= 'absolute';     //+bgltrt+':0%; '+bgtpbt+':'+( zthht+2*thmat+2*gap)+'%'; // decplace(cellthht,2)% one row down
+			var maxwd	= Math.round(maxwd * (zgalwd/zbgwd)); 
+			break;
+		}
+		case 6:{ // big pic centered - thumbnails on four sides
+			// to do...
+			var zthlength	= (zthht+2*thmat+2*gap)*perside; //cellsht
+			var zthdepth 	= (zthwd+2*thmat+2*gap)*rowcol;
+			var zbght 	= zthlength-2*bgmat-2*gap; //cellsht
+			var zbgwd 	= zbght*aspect;
+			var zcellswd 	= zthdepth + zbgwd +2*bgmat+2*gap;
+			var zcellsht 	= zthlength; 
+			var zgalwd	= zcellswd+2*galmat ;        
+			var zgalht	= zcellsht + (zgalwd-zcellswd);
+			var bgltrt	= 'left';
+			var bgtpbt	= 'top';
+			var mainpos	= 'relative';
+			var maxwd	= Math.round(maxwd * (zgalwd/zbgwd)); 
+			break;
+		}
+	}
+	// output
+	var galht=100*(zgalht/zgalwd);
+	var cellswd = 100*zcellswd/zgalwd; 	// percent of gallery width
+	var cellsht = 100*zcellsht/zgalht; 	// percent of gallery height
+
+	// galcells is container for all cells
+	var cellbgwd = 100*(zbgwd+2*bgmat)/zcellswd;	
+	var cellbght = 100*(zbght+2*bgmat)/zcellsht;
+	var cellthwd = 100*(zthwd+2*thmat)/zcellswd;	
+	var cellthht = 100*(zthht+2*thmat)/zcellsht;
+
+	// each image is dimensioned from its cell
+	var imgbgwd = 100*(zbgwd/(zbgwd+2*bgmat));
+	var imgbght = 100*(zbght/(zbght+2*bgmat));
+	var imgthwd = 100*(zthwd/(zthwd+2*thmat));
+	var imgthht = 100*(zthht/(zthht+2*thmat));
+	var cellgap = 100* gap/zcellswd;
+
+
+	var stylesheet=''
+		+'\n<style>'
+	
+		+'\n/* colors and borders */'
+		+'\n.pic_gallery'+key+' { '+galborder+'; } /* gallery border color */'
+		+'\n.pic_gallery'+key+' .pic_sm div { '+cellborder+ '} /* thumbnail cell border */'
+		+'\n.pic_gallery'+key+' .pic_lg div { '+cellborder+ '} /* main photo cell border */'
+		+'\n.pic_gallery'+key+' .pic_sm img { '+picborder +'} /* thumbnail border */'
+		+'\n.pic_gallery'+key+' .pic_lg img { '+picborder +'} /* main photo border */'
+		+'\n.pic_gallery'+key+' .pic_set:hover .pic_sm div { color: red; } /* thumbnail border hover color */'
+		+'\n.pic_gallery'+key+' { background-color:'+galcolor+'; } /* gallery background color */'
+		+'\n.pic_gallery'+key+' .pic_sm div, '
+		+'\n.pic_gallery'+key+' .pic_lg div { background-color:'+cellcolor+'; } /* cell background color */'
+		+'\n.pic_gallery'+key+' .pic_head,'
+		+'\n.pic_gallery'+key+' .pic_foot { color:'+textcolor+';} /* gallery text color */'
+		+'\n'
+		+'\n/* text */'
+		+'\n.pic_gallery'+key+' { font-family:arial; font-size:16px; }'
+		+'\n.pic_gallery'+key+' .pic_head {'+showHd+' text-align:center; font-size:.88em; font-weight:bold; padding-top:.5em; }'
+		+'\n.pic_gallery'+key+' .pic_foot {'+showFt+' text-align:center; font-size:.7em;  }'
+		+'\n'
+		+'\n/* shadows and corners */'
+		+'\n.pic_gallery'+key+' .pic_sm { '+thcellcor+' ' + cellshadow+ '}'
+		+'\n.pic_gallery'+key+' .pic_lg { '+bgcellcor+' ' + cellshadow+ '}'
+		+'\n.pic_gallery'+key+' .pic_sm div { '+thcellcor+' ' + cellrshadow+ '} /* cell corners and shadows */'
+		+'\n.pic_gallery'+key+' .pic_lg div { '+bgcellcor+' ' + cellrshadow+ '} /* cell corners and shadows */'
+		+'\n.pic_gallery'+key+' .pic_sm img { '+thcorners+' '+picshadow +'} /* image corners and shadows */' 
+		+'\n.pic_gallery'+key+' .pic_lg img { '+bgcorners+' '+picshadow +'} /* image corners and shadows */'
+		+'\n'
+		+'\n/* sizing, matting, and margins (all values interact and vary by aspect ratio and image count) */'
+		+'\n.pic_gallery'+key+' { width:'+size+'%; max-width:'+maxwd+'px; } /* change this % in media queries */'
+		+'\n.pic_gallery'+key+' .pic_gal_'+perside+'x'+rowcol+' { width:100%; padding-top:'+decplace( galht,2)+'%; }'
+		+'\n.pic_gallery'+key+' .pic_gal_'+perside+'x'+rowcol+' .pic_gal_cells { width:'+decplace(cellswd,2)+'%; height:'+decplace(cellsht,2)+'%; } /* sets padding around entire gallery */'
+		+'\n.pic_gallery'+key+' .pic_gal_'+perside+'x'+rowcol+' .pic_sm { width:'+decplace(cellthwd,2)+'%; height:'+decplace(cellthht,2)+'%; margin:'+decplace(cellgap,2)+'%; }'
+		+'\n.pic_gallery'+key+' .pic_gal_'+perside+'x'+rowcol+' .pic_lg { width:'+decplace(cellbgwd,2)+'%; height:'+decplace(cellbght,2)+'%; margin:'+decplace(cellgap,2)+'%; }' 
+		+'\n.pic_gallery'+key+' .pic_gal_'+perside+'x'+rowcol+' .pic_sm img { max-width:'+decplace(imgthwd,2)+'%; max-height:'+decplace(imgthht,2)+'%; } /* sets margin around thumbnail */'
+		+'\n.pic_gallery'+key+' .pic_gal_'+perside+'x'+rowcol+' .pic_lg img { max-width:'+decplace(imgbgwd,2)+'%; max-height:'+decplace(imgbght,2)+'%; } /* sets margin around large photo */'
+		+'\n'
+		+'\n/* structural */'
+		+'\n.pic_gallery'+key+', .pic_gallery'+key+' * { -webkit-box-sizing:border-box; -moz-box-sizing:border-box; box-sizing:border-box; }'
+		+'\n.pic_gallery'+key+', .pic_gallery'+key+' .pic_gal { position:relative; margin:auto; }'
+		+'\n.pic_gallery'+key+' .pic_gal_cells { position:absolute; left:0; top:0; bottom:0; right:0; margin:auto; }'
+		+'\n.pic_gallery'+key+' img { position:absolute; width:auto; height:auto; left:0; top:0; bottom:0; right:0; margin:auto; }'
+		+'\n.pic_gallery'+key+' .pic_sm { position:relative; overflow:hidden; float:left; display:block; }'
+		+'\n.pic_gallery'+key+' .pic_lg { position:absolute; overflow:hidden; display:none; '+bgltrt+':0%; '+bgtpbt+':0%; z-index:1; }'
+		+'\n.pic_gallery'+key+' .pic_sm div, '
+		+'\n.pic_gallery'+key+' .pic_lg div { position:absolute; left:0%; top:0%; right:0%; bottom:0%; }'
+		+'\n.pic_gallery'+key+' .pic_lg { display:none; }'
+		+'\n.pic_gallery'+key+' .pic_lg.pic_main { position:'+mainpos+'; display:block; float:'+bgltrt+'; z-index:0; } /* turn on default large photo */'
+		+'\n.pic_gallery'+key+' .pic_set:hover .pic_sm div { opacity:.5; border:1px solid; }'
+
+		// for splits, we want to push down the nth child cell and use abs on pic_main and pic_lg.
+		// add an element between pic_set cells to hide or show
+		//+'\n.pic_gallery'+key+' .pic_gal_cells i {display:none; font-size:0; line-height:0; }'
+		//+'\n.pic_gallery'+key+' .pic_gal_cells .pic_set:nth-child('+(perside*2*Math.floor(rowcol/2) )+') + i {display:block; width:100%; padding-top:'+decplace(cellthht,2)+'%; height:'+decplace(cellbght+cellthht+cellgap,2)+'%; }' // bottom was 25%; height will be a perside value as a percentage of the total gallery.
+		;
+
+		if (doSticky){
+		stylesheet+=''
+		+'\n.pic_gallery'+key+' .pic_main { visibility:hidden; }'
+		+'\n.pic_gallery'+key+' input { position:absolute; top:0; left:0; visibility:hidden; }'
+		+'\n.pic_gallery'+key+' input:checked + label + div.pic_lg { display:block }'
+		+'\n.pic_gallery'+key+' input:checked + label { opacity:.5; }'
+		;
+		}
+		else{
+		stylesheet+=''
+		//+'\nxx.pic_gallery'+key+' .pic_gal_cells:hover .pic_main { visibility:hidden; } /* enable if no padding and main shadow bleeds */'
+		+'\n.pic_gallery'+key+' .pic_set:hover .pic_lg { display:block; '+bgltrt+':0%; '+bgtpbt+':0%; }'
+		;
+		}
+
+
+		if (doSticky && doSupersize){
+		stylesheet+=''
+		+'\n'
+		+'\n/* supersize overlay */'
+		+'\n.pic_gallery'+key+' input:checked + label + .pic_lg label { opacity:1; }'
+		+'\n.pic_gallery'+key+' input:checked + label + .pic_lg input:checked + label { background:transparent; '
+		+'\n\tposition:fixed; z-index:999; top:0; left:0; width:100%; height:100%; '
+		+'\n\tdisplay:flex; justify-content:center; align-items:center; }'
+		+'\n.pic_gallery'+key+' input:checked +label+ .pic_lg input:checked + label::before { content:""; '
+		+'\n\tposition:absolute; left:0; top:0; width:100%;height:100%; background-color:rgba(0,0,0,.7); }'
+		+'\n.pic_gallery'+key+' input:checked +label+ .pic_lg input:checked + label img { '
+		+'\n\tbackground:white; max-width: 98%; max-height: 98%; }'
+
+		//need to change ".pic_lg div"  to  ".pic_lg label" when supersize
+		stylesheet=stylesheet.replace(/\.pic_lg div/g,'.pic_lg label');
+		}
+
+
+		stylesheet+=''
+		+'\n</style>'
+		+'\n'
+
+		+'\n<!--[if lt ie 8]>'
+		+'\n<style>'
+		+'\n/* lower browser versions can not display this gallery */'
+		+'\n.pic_gallery'+key+' img,'
+		+'\n.pic_gallery'+key+' .pic_gal,'
+		+'\n.pic_gallery'+key+' .pic_sm div,'
+		+'\n.pic_gallery'+key+' .pic_gal_cells { position:relative; border:0; padding:0; margin:0; }'
+		+'\n.pic_gallery'+key+' .pic_sm img { width:99%; height:auto; }'
+		+'\n</style>'
+		+'\n<![endif]-->'
+		;
+
+	stylesheet=''
+		+'\n<!-- copyright 2016 shipscript -->'
+		+'\n<br style="display:none">'
+		+ compactCode(stylesheet);
+
+	var galcode=''
+		+'\n'
+		+'\n<!-- photo gallery -->'
+		+'\n<div class="pic_gallery'+key+'">'
+		+'\n<div class="pic_head">'+header+'</div>'
+		+'\n<div class="pic_gal pic_gal_'+perside+'x'+rowcol+'"><!-- thumbnail rows-columns -->'
+		+'\n<div class="pic_gal_cells"><!-- positioning large photos -->'
+		+'\n'
+		+'\n<!-- default large photo -->'
+		;
+		if (doSticky){
+		galcode+=''
+		+'\n<div class="pic_lg pic_main"></div>'
+		;
+		}else{
+		galcode+=''
+		+'\n<div class="pic_lg pic_main"><div>'
+		+'\n<img src="'+imglist[0]+'" >'
+		+'\n</div></div>'
+		;
+		}
+		galcode+=''
+		+'\n'
+		+'\n<!-- thumbnails ('+(perside*rowcol)+' max) -->'
+		;
+
+
+	for (var i=0; i<Math.min(imglist.length,perside*rowcol); i++){
+		// test here for sticky and add the extra code
+		if (i==0){var sel=" checked"} else{ sel=''}
+		var sticky='';
+		var opener='<div class="pic_sm">';
+		var closer='</div>';
+		var supersz='';
+		var ssopen='<div>';
+		var ssclose='</div>';
+
+		if (doSticky){
+			sticky='\n<input id="pic'+(i+1)+key+'" name="pic_select'+key+'" type="radio"'+sel+'>';
+			opener='\n<label for="pic'+(i+1)+key+'" class="pic_sm">';
+			closer='</label>';
+		    if (doSupersize){
+			supersz='\n<input id="xl_pic'+(i+1)+key+'" type="checkbox">';
+			ssopen='\n<label for="xl_pic'+(i+1)+key+'">';
+			ssclose='</label>';
+
+		    }
+		}
+		galcode+=''
+		+'\n<span class="pic_set">'+sticky+opener+'<div>'
+		+'\n<img src="'+imglist[i]+'" >'
+		+'\n</div>'+closer+'<div class="pic_lg">'+supersz+ssopen
+		+'\n<img src="'+imglist[i]+'" >'
+		+'\n'+ssclose+'</div></span>'
+		//+'<i></i>' // for splitting galleries
+		+'\n'
+		;
+
+	}
+
+	galcode+=''
+		+'\n</div><!-- end pic_gal_cells -->'
+		+'\n</div>'
+		+'\n<div class="pic_foot">'+footer+'</div>'
+		+'\n</div><!-- end photo gallery -->'
+		;
+
+	galcode=''
+		+'\n<!-- =========================================== -->'
+		+'\n<!-- begin responsive CSS rollover photo gallery -->'
+		+'\n<!-- =========================================== -->'
+		+stylesheet
+		+galcode
+		+'\n<!-- =========================================== -->'
+		+'\n<!-- end responsive CSS rollover photo gallery   -->'
+		+'\n<!-- =========================================== -->'
+		+'\n'
+		;
+
+	$('iCode').value=galcode;
+	inPageView(galcode);
+
+}
+function compactCode(txt){
+	var act=$('iCodeOptions').value;
+
+	if (act=="left"){ // left-aligned
+		txt=txt.replace(/[\n\r](\s+)/g, "\n")
+		.replace(/[ ]+/g, " ");
+	}
+	else if (act=="leftnone"){ // left with no comments
+		txt=txt.replace(/[\n\r](\s+)/g, "\n")
+		.replace(/\/\*.+?\*\//g, " ")
+		.replace(/[ ]+/g, " ");
+	}
+	else if (act=="tight"){
+		txt=txt.replace(/\/\*.+?\*\//g, " ")
+		.replace(/\s+/g, " ")
+		.replace(/\s*}\s*/g, "}")
+		.replace(/\s*{\s*/g, "{")
+		.replace(/\s*\>\s*/g, ">");
+	}
+	else {  // no change
+	}
+	return txt;
+}
+
+
+function preparePreview(code){
+
+	var pagebg ="background:transparent url('data:image/gif;base64,R0lGODlhDAAMAIAAAObm5v///yH5BAEAAAEALAAAAAAMAAwAAAIWRI5plsjxXItRwqbq1JbTiT3cNR5AAQA7')";
+	var usercode='<table width=100% id=galleryMeasure style="position:relative" cellpadding=0 cellspacing=0 border=0 align=center><tr><td>'+code+'</td></tr></table>';
+	var sizescript='\n<scr'+'ipt>function szzs(){'  // resize the iframe to fit the contents
+		+'if (window.parent.document.getElementById("inPagePreview")){'
+		+'window.parent.document.getElementById("inPagePreview").style.height='
+		+'Math.min(document.getElementById("frameheightmeasure").offsetHeight+60, 32000)+"px";}}<\/scr'+'ipt>'
+		;
+
+	//-- generate iframe script for preview
+	var content=''
+		+'<!doctype html>' 
+		+'<html><head>'
+		+'<meta http-equiv="content-type" content="text/html; charset=UTF-8">'
+		+'<meta name=viewport content="width=device-width, initial-scale=1">'
+		+'<title>Preview<\/title>'
+		+ sizescript
+		+'<\/head>\n<body style="margin:0px; padding:0px; '+pagebg+';}" onresize="szzs()" onload="szzs()" >'
+		+'<div id="frameheightmeasure" style="position:relative;margin-top:20px;">'
+		+ usercode
+		+ '<br style="height:1px; font-size:1px; line-height:1px; clear:both;"><\/div>' // attempt to clear any overlays 
+		+'<\/body><\/html>'
+		;
+	return content;
+}
+function inPageView(content){
+	/* iframe preview */
+  	var Wm = window.frames.inPagePreview;
+  	Wm.document.open();
+  	Wm.document.write(preparePreview(content));
+  	Wm.document.close();
+}
+var w0;
+function popupPreview(){
+	var content = $('iCode').value;
+
+	w0 = window.open("","popup0",",,directories=no,menubar=yes,status=yes,toolbar=yes,resizable=yes,scrollbars=yes,screenY=0,top=0,screenX=0,left=0" );
+	content=''
+		+ '<!DOCTYPE html>'
+		+ '<html><head>'
+		+ '<meta http-equiv="content-type" content="text/html; charset=UTF-8" />'
+		+ '<title>Preview</title></head>'
+		+ '<body style="background-image: url(\'data:image/gif;base64,R0lGODlhDAAMAIAAAObm5v///yH5BAEAAAEALAAAAAAMAAwAAAIWRI5plsjxXItRwqbq1JbTiT3cNR5AAQA7\');}">\n\n'
+		+ content
+		+ '\n<br clear="both"></body></html>\n'
+		;
+	w0.document.write(content);
+  	w0.document.close();   
+	if (document.focus){w0.document.focus(true)} else if (window.focus){w0.focus(true)};
+}
+
+
+function getAjaxObj() {  
+  	if (window.XMLHttpRequest) { // Chrome, Firefox, IE7+, Opera, Safari 
+    	    return new XMLHttpRequest();
+  	}  
+  	try {  // IE6-
+    	    return new ActiveXObject('MSXML2.XMLHTTP.6.0');
+  	} catch (e) {  
+    		try {  // The fallback. 
+    		  	return new ActiveXObject('MSXML2.XMLHTTP.3.0'); 
+    		} catch (ev) {  
+     		 	alert('This browser is not supported.');  
+     		 	return null;
+    		}  
+  	}  
+}
+
+// color functions
+//buildPalette(w,h)// zippypalette has only size values, no transparent option
+
+function updateColorSwatches(){
+	for (var i=0; i<=5; i++){
+		colorEvent($('iColor'+i));
+	}
+}
+function colorRadio(el){
+	selColor=el.id.replace('Color',''); 
+	doColor(el.nextSibling.value); 
+	makeCode();
+}
+function colorEvent(el){
+	selColor=el.id.replace('iColor',''); 
+	$('Color'+selColor).checked=true; 
+	doColor(el.value);
+}
+
+function doColor(palettecolor){
+	//preprocess colors to detect transparent
+	if (selColor==-1){return} 
+	if (palettecolor.toLowerCase()=='transparent'){
+		$('iColor'+selColor).value=palettecolor;
+		$('iColor'+selColor).style.backgroundColor=palettecolor;
+		$('iColor'+selColor).style.color='#000';
+		makeCode();
+	}
+	else {sendColor(palettecolor);}
+}
+
+
+function setDynaColor(palettecolor){
+	// This function must be in the application.
+	// When the user clicks a color cell or holds down 
+	// the mouse button while dragging over the palette, 
+	// the colors will arrive here.  The application may 
+	// use these value or the activity can be ignored by 
+	// not writing any code for this function.
+	//if (palettecolor!=''){setColor(palettecolor)}else {}
+	//setColor(palettecolor);
+	// We can't use this at startup, since it negates all colors
+	// but we could set a startup flag and allow dynamic color changes,
+	// but we don't need the feature
+}
+
+function setColor(palettecolor) { 
+	// This function must be in the application.
+   	// This value arrives when the user enters a color or when mouseup on the palette.
+	if (selColor==-1 || palettecolor==''){return}
+	if (palettecolor!=''){
+		$('iColor'+selColor).value=palettecolor;
+		$('iColor'+selColor).style.backgroundColor=palettecolor;
+		$('iColor'+selColor).style.color=makeOppColor(getRGB(palettecolor));
+		makeCode();
+	} 
+}
+function colorcode(color){
+	return "#"+rgb2hex(getRGB(color));
+}
+</script>
+
+
+</head>
+
+<body style="font-family:arial" onload="init()">
+<div style="display:none; position:absolute; right:0; top:0; padding:.5em 1em; background:red; color:white; font-size:2em; ">
+BETA
+</div>
+
+
+
+<div class="page">
+<h2>Create a CSS Photo Gallery, <small><br>Rollover or Clickable, Mobile Responsive, <br>without Scripts, Events, or Active Content, using your hosted Images</small></h2>
+
+<p class="numline"><big><big><b>1. </b></big></big> Gather your hosted images</p>
+
+<p class=header>
+  Fetch photos from an ebay listing number or URL: <input id="itemnumber" value="" style="width:200px" type="text">
+  <select name="siteid" id="siteid" value="">
+  <script>buildSiteList()</script><option value="">-select-</option><option value="ebay.com" selected="">US</option><option value="ebay.co.uk">UK</option><option value="ebay.com.au">Australia</option><option value="ebay.at">Austria</option><option value="benl.ebay.be">Belgium (de)</option><option value="befr.ebay.be">Belgium (fr)</option><option value="ebay.ca">Canada</option><option value="cafr.ebay.ca">Canada (fr)</option><option value="ebay.fr">France</option><option value="ebay.de">Germany</option><option value="ebay.com.hk">HongKong</option><option value="ebay.in">India</option><option value="ebay.ie">Ireland</option><option value="ebay.it">Italy</option><option value="ebay.com.my">Malaysia</option><option value="ebay.nl">Netherlands</option><option value="ebay.ph">Philippines</option><option value="ebay.pl">Poland</option><option value="ebay.com.sg">Singapore</option><option value="ebay.es">Spain</option><option value="ebay.ch">Switzerland</option><option value="motors.ebay.com">eBayMotors</option>
+  </select>
+
+  <select name="ebaysize" id="ebaysize" value="12">
+  <option value="1">400</option>
+  <option value="12">500</option>
+  <option value="20" selected="">600</option>
+  <option value="3">800</option>
+  <option value="32">1000</option>
+  <option value="57">1600</option>
+  </select>
+  <input value="fetch" onclick="callEbay(); return false" type="submit">
+</p>
+<p class=header>
+  <button style="float:right" onclick="$('iPhotoMess').value='';">&darr; Clear All</button>
+  Need to extract photos from code? Add your image codes, ClicPic code, or old gallery code here and extract:
+</p>
+
+<textarea id="iPhotoMess">
+This is text that contains some image URLs embedded in other code. 
+The tool can extract most common image URLs for you. 
+<img src="http://www.isdntek.com/tagbot/misc/starburst1.jpg">
+<img width="500" src="http://www.isdntek.com/tagbot/misc/gem2.jpg">
+<a href="http://www.isdntek.com/tagbot/misc/bambi.jpg"><img src="http://www.isdntek.com/tagbot/misc/bambi.jpg" width="80"></a> array=("http://www.isdntek.com/tagbot/misc/nib1.jpg", "http://www.isdntek.com/tagbot/misc/starburst2.jpg", "http://www.isdntek.com/tagbot/misc/gem1.jpg");
+http://www.isdntek.com/tagbot/misc/ring2.jpg
+http://www.isdntek.com/tagbot/misc/ducks.jpg
+http://www.isdntek.com/tagbot/misc/nib2.jpg
+https://www.isdntek.com/tagbot/misc/starburst3.jpg
+https://isdntek.com/tagbot/misc/gem3.jpg
+http://www.isdntek.com/tagbot/misc/ring1.jpg
+</textarea>
+<input type=submit value="extract" onclick="extractPhotos(); return false;">
+
+
+
+<p class=header><button style="float:right" onclick="$('iPhotolist').value='';">
+&darr; Clear All</button>Photo URLs to be used in your gallery (add, remove, or rearrange ):
+<button onclick="$('iPhotolist').value=$('iPhotolist').value.replace(/http\:/gi,'https:');" style="margin-left:2em">Convert to HTTPS &darr;</button>
+</p>
+<textarea id="iPhotolist" >
+http://www.isdntek.com/tagbot/misc/starburst1.jpg
+http://www.isdntek.com/tagbot/misc/gem2.jpg
+http://www.isdntek.com/tagbot/misc/bambi.jpg
+http://www.isdntek.com/tagbot/misc/nib1.jpg
+http://www.isdntek.com/tagbot/misc/starburst2.jpg
+http://www.isdntek.com/tagbot/misc/gem1.jpg
+http://www.isdntek.com/tagbot/misc/ring2.jpg
+http://www.isdntek.com/tagbot/misc/ducks.jpg
+http://www.isdntek.com/tagbot/misc/nib2.jpg
+http://www.isdntek.com/tagbot/misc/starburst3.jpg
+http://www.isdntek.com/tagbot/misc/gem3.jpg
+http://www.isdntek.com/tagbot/misc/ring1.jpg
+</textarea>
+
+<div>
+
+<p class="numline"><big><big><b>2. </b></big></big> Style your Photo Gallery</p>
+<div class="options">
+	<p class="header sub">Gallery configuration:</p>
+
+	<input id="iMax" type=text value="600" size=2 onkeydown="if (event.keyCode==13){makeCode();}"><div class=spinner>
+	<div class=spinup onclick="spin(-1,this,+10,100,1200,0)"><span>&#x25B2;</span></div>
+	<div class=spindn onclick="spin(-1,this,-10,100,1200,0)"><span>&#x25BC;</span></div></div><b class=dim style="font-size:smaller">px</b>
+	<label for="iMax" title="Gallery will be sized around your maximum image width and will be wider than your image.">Max large image width</label><br>
+
+	<input id="iSize" type=text value="100" size=2 onkeydown="if (event.keyCode==13){makeCode();}"><div class=spinner>
+	<div class=spinup onclick="spin(-1,this,+5,10,100,0)"><span>&#x25B2;</span></div>
+	<div class=spindn onclick="spin(-1,this,-5,10,100,0)"><span>&#x25BC;</span></div></div><b class=dim>%</b>
+	<label for="iSize" title="Set gallery relationship to its container, typically 100%.">gallery width within container</label><br>
+
+	<input id="iPerside" type=text value="5" size=2 onkeydown="if (event.keyCode==13){makeCode();}"><div class=spinner>
+	<div class=spinup onclick="spin(-1,this,+1,1,12,0)"><span>&#x25B2;</span></div>
+	<div class=spindn onclick="spin(-1,this,-1,1,12,0)"><span>&#x25BC;</span></div></div><b class=dim>&nbsp;</b>
+	<label for="iPerside" title="Scale thumbnail size to large image.">thumbnails along one side</label><br>
+
+	<input id="iRowcol" type=text value="1" size=2 onkeydown="if (event.keyCode==13){makeCode();}"><div class=spinner>
+	<div class=spinup onclick="spin(-1,this,+1,1,10,0)"><span>&#x25B2;</span></div>
+	<div class=spindn onclick="spin(-1,this,-1,1,10,0)"><span>&#x25BC;</span></div></div><b class=dim>&nbsp;</b>
+	<label for="iRowcol" title="Depth of thumbnails receding from large image." >rows or columns of thumbnails</label><br>
+
+	<input type=text id="iAspect" value="1" size=2 onkeydown="if (event.keyCode==13){this.value=calcRatio(this.value);makeCode();}" title="Select shape or enter your own decimal value.">
+	<select id="iAspectSel" value="1" onchange="$('iAspect').value=this.value;makeCode();" style="width:8em" >
+	<option value="1" selected>square 1:1</option>
+	<option value="1.333">landscape 4:3</option>
+	<option value=".75">portrait 3:4</option>
+	<option value="1.5">SLR landscape 3:2</option>
+	<option value=".667">SLR portrait 2:3</option>
+	</select><label title="Select image shape or enter your own values. Divisor or ratio accepted."> image shape</label><br>
+
+	<select id="iPosition" value="3" onchange="makeCode();">
+	<option value="2">top</option>
+	<option value="0">bottom</option>
+	<option value="1">left</option>
+	<option value="3" selected>right</option>
+	<!--coming soon
+	<option value="4" selected>left+right</option>
+	<option value="5" selected>top+bottom</option>
+	<option value="6" selected>4 sides</option>
+	-->
+	</select><label title="Thumbnails can appear on any one of four sides."> thumbnail location</label><br>
+
+	<label title="Hover is default. Select this option for sticky clickable images."><input type=checkbox id="iSticky" onchange="makeCode();"> Clickable thumbnails</label><br>
+	<label title="Add supersize to clickable images."><input type=checkbox id="iSupersize" onchange="makeCode();"> Supersize (apply to clickable)</label><br>
+
+
+	<br clear=both>
+	<p class="header sub">Text Labeling:</p>
+	<label title="Title at top of gallery.">Gallery header</label><br>
+	<input type=text value="" id="iHeader" style="width:230px"><br>
+	<label title="Small message or copyright at bottom of gallery.">Gallery footer</label><br>
+	<input type=text value="" id="iFooter" style="width:230px"><br>
+
+
+</div>
+
+<div class="options">
+	<p class="header sub">Spacing & Matting:</p>
+
+	<input id="iGalMat" type=text value="10" size=2 onkeydown="if (event.keyCode==13){makeCode();}"><div class=spinner>
+	<div class=spinup onclick="spin(-1,this,+2,0,50,0)"><span>&#x25B2;</span></div>
+	<div class=spindn onclick="spin(-1,this,-2,0,50,0)"><span>&#x25BC;</span></div></div><b class=dim>&nbsp;</b>
+	<label for="iGalMat" title="Gap between gallery outline and image cells within.">Gallery Matting </label><br>
+
+	<input id="iBgMat" type=text value="10" size=2 onkeydown="if (event.keyCode==13){makeCode();}"><div class=spinner>
+	<div class=spinup onclick="spin(-1,this,+2,0,30,0)"><span>&#x25B2;</span></div>
+	<div class=spindn onclick="spin(-1,this,-2,0,30,0)"><span>&#x25BC;</span></div></div><b class=dim>&nbsp;</b>
+	<label for="iBgMat" title="Gap around large image between the image and its cell.">Big picture Matting </label><br>
+
+	<input id="iThMat" type=text value="10" size=2 onkeydown="if (event.keyCode==13){makeCode();}"><div class=spinner>
+	<div class=spinup onclick="spin(-1,this,+1,0,30,0)"><span>&#x25B2;</span></div>
+	<div class=spindn onclick="spin(-1,this,-1,0,30,0)"><span>&#x25BC;</span></div></div><b class=dim>&nbsp;</b>
+	<label for="iThMat" title="Gap around thumbnail image between the image and its cell.">Thumbnail Matting </label><br>
+
+	<input id="iGap" type=text value="4" size=2 onkeydown="if (event.keyCode==13){makeCode();}"><div class=spinner>
+	<div class=spinup onclick="spin(-1,this,+1,0,20,0)"><span>&#x25B2;</span></div>
+	<div class=spindn onclick="spin(-1,this,-1,0,20,0)"><span>&#x25BC;</span></div></div><b class=dim>&nbsp;</b>
+	<label for="iGap" title="Gap between all image cells. Not applied to outer gallery matting.">Image cell Gap </label><br>
+
+
+	<p class="header sub">Decoration:</p>
+	<select id="iBorders" value="0" style="width:9em" onchange="makeCode();">
+	<option value="0" selected>none</option>
+	<option value="1">cell borders</option>
+	<option value="2">image borders</option>
+	<option value="3">cell & image borders</option>
+	</select><label>Borders </label><br>
+
+	<select id="iShadows" value="0" style="width:9em" onchange="makeCode();">
+	<option value="0" selected>none</option>
+	<option value="1">cell shadows</option>
+	<option value="2">image shadows</option>
+	<option value="3">image & cell shadows</option>
+	</select><label title="Use matting of 4 or higher to see shadows.">Shadows</label><br>
+
+	<select id="iRounding" value="0" style="width:9em" onchange="makeCode();">
+	<option value="0" selected>none</option>
+	<option value="1">cell rounding</option>
+	<option value="2">image rounding</option>
+	<option value="3">cell & image rounding</option>
+	</select><label>Rounding</label><br>
+
+	<select id="iCellBdrStyle" value="0" style="width:9em" onchange="makeCode();">
+	<option value="0" selected>solid</option>
+	<option value="1">3D</option>
+	</select><label>BorderType</label><br>
+
+</div>
+<div class="options">
+
+	<p class="header sub">Colors:</p>
+	<input type=radio id=Color0 name=colors
+	onclick="colorRadio(this);"  
+	><input type=text id="iColor0" value="#fff" style="width:7em"
+	onkeydown="if (event.keyCode==13){colorEvent(this);}"
+	onchange="colorEvent(this);" 
+	onfocus="colorEvent(this);" 
+	><label>Gallery color</label><br>
+
+	<input type=radio id=Color1 name=colors
+	onclick="colorRadio(this);"   
+	><input type=text id="iColor1" value="#fff" style="width:7em"
+	onkeydown="if (event.keyCode==13){colorEvent(this);}"
+	onchange="colorEvent(this);" 
+	onfocus="colorEvent(this);" 
+	><label>Cell color *</label><br>
+
+	<input type=radio id=Color2 name=colors
+	onclick="colorRadio(this);"  
+	><input type=text id="iColor2" value="#888" style="width:7em"
+	onkeydown="if (event.keyCode==13){colorEvent(this);}"
+	onchange="colorEvent(this);" 
+	onfocus="colorEvent(this);" 
+	><label>Image outline</label><br>
+
+
+	<input type=radio id=Color3 name=colors
+	onclick="colorRadio(this);"  
+	><input type=text id="iColor3" value="#888" style="width:7em"
+	onkeydown="if (event.keyCode==13){colorEvent(this);}"
+	onchange="colorEvent(this);" 
+	onfocus="colorEvent(this);" 
+	><label>Cell outline</label><br>
+
+
+	<input type=radio id=Color4 name=colors
+	onclick="colorRadio(this);"  
+	><input type=text id="iColor4" value="#888" style="width:7em"
+	onkeydown="if (event.keyCode==13){colorEvent(this);}"
+	onchange="colorEvent(this);" 
+	onfocus="colorEvent(this);" 
+	><label>Gallery outline</label><br>
+
+
+	<input type=radio id=Color5 name=colors
+	onclick="colorRadio(this);"  
+	><input type=text id="iColor5" value="#333" style="width:7em"
+	onkeydown="if (event.keyCode==13){colorEvent(this);}"
+	onchange="colorEvent(this);" 
+	onfocus="colorEvent(this);" 
+	><label>Text Color</label><br>
+
+</div>
+<div class="options"  style="margin-right:0;">
+	<p class="header sub">Colors:</p>
+	<select id=ColorList value="0" onclick="premadeGalleryColors(this.value)"><script>document.write(buildPremadeColorList())</script></select>
+	<!-- rainbow palette cell -->
+	<script language=javascript>buildPalette(2.5,3.8); </script>
+
+	<button onclick="doColor('transparent')">transparent</button>
+	<div style="font-size:.6em"><big>*</big> Transparent cell background<br>not recommended for hover-gallery<br>if photos not identical size/shape.</div>
+	<!-- end of rainbow palette and color selection -->
+</div>
+
+
+<br clear=both><br>
+</div>
+
+<p class="numline"><big><big><b>3. </b></big></big> Preview your Photo Gallery</p>
+<div style="text-align:center"><input type=submit value="make&darr;" onclick="makeCode(); return false;"></div>
+
+
+<div style="position:relative">
+<iframe frameBorder="0" id="inPagePreview" name="inPagePreview" style="background-color:white; width:99%; height:200px;" ><!-- gallery preview --></iframe>
+<div style="display:none; position:absolute; right:0; bottom:0; width:20px; height:20px; background:pink" 
+onclick="$('inPagePreview').style.height=($('inPagePreview').offsetHeight+100)+'px'"><!-- only works of body.onresize is removed--></div>
+</div>
+
+
+
+
+<p class="numline"><big><big><b>4. </b></big></big> Copy code and paste into HTML view of editor.</p>
+<p class=header>
+	<input type="submit" style="float:right; display:none; " value="Make &amp; Preview&rarr;" onclick="makeCode();popupPreview();return false">
+	<span style="float:left"> Copy your CSS gallery code below: </span>
+	<span style="padding-left:4em">Stylesheet Options:
+	<select id="iCodeOptions" value="loose" onchange="makeCode()">
+	<option value="loose" selected>Editable (default) </option>
+	<option value="left">Left-aligned for eBay</option>
+	<option value="leftnone">Left - no comments</option>
+	<option value="tight">Tightly condensed</option>
+	</select></span>
+	<span style="padding-left:4em"><label for="iMulti"><input id="iMulti" type="checkbox" onchange="makeCode()">Encode for multiples in one page</label> </span>
+</p>
+
+
+<textarea id="iCode" style="height:300px;">
+</textarea>
+<input type="submit" style="float:right;" value="Popup Preview&rarr;" onclick="popupPreview();return false">
+
+
+<div style="font-family: verdana, arial; margin-auto; max-width:700px; margin:auto; clear:both; ">
+	<p>
+	Responsive, resizable, CSS photo gallery enlarges photos on rollover (hover) or click, 
+	offers lightbox overlay option, and centers images of odd shapes without using Javascript or jQuery. 
+	Includes CSS stylesheet. 
+	</p>
+	<p>
+	Works with modern browsers. Not supported at all by IE6 or IE7, and somewhat supported by OP9. 
+	<!--Hover on the iPad is a touchstart, and then a touchend elsewhere on the page.-->
+	Enlargement on the iPad requires touching the thumbnail. 
+	It is released when the screen is touched outside the gallery.
+	</p>
+	<p>
+	Each photo requires two entries, once for the thumbnail and once for the large photo. 
+	An additional photo must be added as the default that displays on page load, when none is hovered. 
+	</p>
+	<p>
+	Photos in the gallery will not be shown larger than the original, but will be scaled smaller to fit. 
+	If you have smaller photos and would like to limit the gallery size to those photo sizes, 
+	set <!--the "smallest" photo dimensions in the tool, and it will define the--> "max-width" 
+	on the tool or in the code in the same place the gallery width percentage is set.
+	</p>
+	<p>
+	This tool handles the math to create thumbnail groupings for any one side 
+	(any number per side and any number deep on that side), 
+	and the math is all that changes for most groupings. If your number of photos will change only slightly, 
+	select a grouping that accommodates the larger number and empty spaces will appear for fewer pictures.  
+	The gallery framework can be further styled with CSS to add color, shadows, and other highlights.
+	</p>
+
+</div>
+
+
+
+
+
+<hr>
+  <p align=center style="font-size:12px; font-family:sans-serif" >
+	courtesy of eBay user <a href="https://www.ebay.com/usr/shipscript" target="_blank">shipscript<img src=https://pics.ebaystatic.com/aw/pics/aboutme-small.gif border=0 hspace=5></a>
+	<br>
+	copyright 2012-2018 &copy; <a href=https://www.isdntek.com target="_blank">isdntek.com</a>
+	<br>
+  </p>
+  <div style="font-family:arial; font-size:10px; text-align:center; color:black;">
+  </div>
+
+
+</div><!-- end page-->
+
+
+
+
+
+
+
+
+</body>
+</html>
